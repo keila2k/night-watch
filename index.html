@@ -1,0 +1,797 @@
+<!doctype html>
+<html lang="he" dir="rtl">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width,initial-scale=1,viewport-fit=cover">
+<meta name="theme-color" content="#11152b">
+<title>שומר לילה</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Fredoka:wght@500;600&family=IBM+Plex+Mono:wght@400;500&family=Rubik:wght@400;500&display=swap">
+<style>
+/* Layout: tablet console. Watch panel (camera, sound and motion meters, last-minute strip) beside the phone link and sensitivity settings; the night log runs underneath. One dark look on purpose: it sits in a dark nursery. */
+:root{
+  --night:#11152b;
+  --well:#0b0e1f;
+  --panel:#181d39;
+  --raise:#232a4c;
+  --line:#2f3662;
+  --text:#ece6f3;
+  --muted:#a29ebf;
+  --glow:#f3b56a;
+  --glow-ink:#2a1a06;
+  --lilac:#b7a8ff;
+  --cry:#ff806f;
+  --calm:#80d4b9;
+  --f-display:'Fredoka','Rubik',system-ui,sans-serif;
+  --f-body:'Rubik','Segoe UI',system-ui,-apple-system,sans-serif;
+  --f-mono:'IBM Plex Mono',ui-monospace,Menlo,Consolas,monospace;
+  --r:14px;
+  color-scheme:dark;
+}
+*{box-sizing:border-box}
+html,body{margin:0}
+body{
+  background:var(--night);
+  background-image:radial-gradient(60rem 22rem at 85% -6rem, rgba(243,181,106,.10), transparent 70%);
+  color:var(--text);
+  font:16px/1.55 var(--f-body);
+  padding-left:max(16px, env(safe-area-inset-left, 0px));
+  padding-right:max(16px, env(safe-area-inset-right, 0px));
+  padding-block:max(16px, env(safe-area-inset-top, 0px)) max(24px, env(safe-area-inset-bottom, 0px));
+  -webkit-text-size-adjust:100%;
+}
+.wrap{max-width:1080px;margin:0 auto;display:flex;flex-direction:column;gap:18px}
+h1,h2{font-family:var(--f-display);font-weight:600;margin:0;text-wrap:balance}
+h1{font-size:1.75rem;letter-spacing:.01em}
+h2{font-size:1.1rem;color:var(--text)}
+p{margin:0}
+button,select,input{font:inherit;color:inherit}
+:focus-visible{outline:2px solid var(--glow);outline-offset:2px}
+
+/* header */
+.top{display:flex;flex-wrap:wrap;align-items:center;justify-content:space-between;gap:12px 20px}
+.brand{display:flex;align-items:center;gap:14px;min-width:0}
+.moon{width:40px;height:40px;border-radius:50%;flex:none;
+  background:radial-gradient(circle at 36% 38%, #ffe0b3 0 30%, var(--glow) 60%, #c9853f 100%);
+  box-shadow:0 0 28px rgba(243,181,106,.35)}
+.sub{color:var(--muted);font-size:.95rem}
+.status{display:flex;align-items:center;gap:10px;padding:8px 14px 8px 16px;border-radius:999px;background:var(--panel);border:1px solid var(--line)}
+.status .dot{width:12px;height:12px;border-radius:50%;background:var(--muted);flex:none}
+.status-text{font-family:var(--f-display);font-weight:500;font-size:1.05rem}
+.status-since{color:var(--muted);font-size:.85rem}
+[data-state="calm"] .dot{background:var(--calm)}
+[data-state="warm"] .dot,[data-state="noise"] .dot{background:var(--glow)}
+[data-state="motion"] .dot{background:var(--lilac)}
+[data-state="cry"] .dot{background:var(--cry);animation:pulse 1.2s ease-in-out infinite}
+@keyframes pulse{0%,100%{box-shadow:0 0 0 0 rgba(255,128,111,.6)}50%{box-shadow:0 0 0 8px rgba(255,128,111,0)}}
+
+/* grid */
+.grid{display:grid;gap:16px;grid-template-columns:minmax(0,1.35fr) minmax(0,1fr);grid-template-areas:"watch side" "log side";align-items:start}
+.watch{grid-area:watch}.side{grid-area:side;display:flex;flex-direction:column;gap:16px;min-width:0}.log{grid-area:log}
+@media (max-width:780px){.grid{grid-template-columns:minmax(0,1fr);grid-template-areas:"watch" "side" "log"}}
+.card{background:var(--panel);border:1px solid var(--line);border-radius:var(--r);padding:18px;display:flex;flex-direction:column;gap:14px;min-width:0}
+
+/* watch */
+.video-wrap{position:relative;aspect-ratio:4/3;max-width:100%;background:var(--well);border-radius:10px;overflow:hidden}
+video{width:100%;height:100%;object-fit:cover;display:block}
+video.mirror{transform:scaleX(-1)}
+.video-empty{position:absolute;inset:0;display:grid;place-items:center;text-align:center;padding:16px;color:var(--muted);font-size:.95rem}
+.meters{display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:16px}
+@media (max-width:460px){.meters{grid-template-columns:minmax(0,1fr)}}
+.meter{display:flex;flex-direction:column;gap:6px;min-width:0}
+.meter-head,.meter-foot{display:flex;justify-content:space-between;gap:8px;align-items:baseline}
+.meter-head .k{font-size:.8rem;letter-spacing:.06em;color:var(--muted)}
+.num{font-family:var(--f-mono);font-variant-numeric:tabular-nums;font-size:1rem}
+.meter-foot{font-size:.8rem;color:var(--muted)}
+.bar{position:relative;height:10px;border-radius:999px;background:var(--raise);overflow:hidden}
+.fill{position:absolute;inset-block:0;inset-inline-start:0;width:0;border-radius:999px;transition:width .2s linear}
+#soundFill{background:var(--glow)}
+#motionFill{background:var(--lilac)}
+.tick{position:absolute;inset-block:-2px;width:2px;background:var(--text);opacity:.85;inset-inline-start:50%}
+.strip{display:flex;flex-direction:column;gap:6px}
+.strip-legend{display:flex;justify-content:space-between;font-size:.75rem;color:var(--muted)}
+.strip-legend .keys{display:flex;gap:14px}
+.key::before{content:"";display:inline-block;width:10px;height:3px;border-radius:2px;margin-inline-end:6px;vertical-align:middle;background:currentColor}
+.key.s{color:var(--glow)}.key.m{color:var(--lilac)}
+#hist{width:100%;height:96px;display:block;background:var(--well);border-radius:8px}
+.hint{background:rgba(243,181,106,.12);border:1px solid rgba(243,181,106,.35);color:var(--text);padding:10px 12px;border-radius:10px;font-size:.92rem}
+.err{background:rgba(255,128,111,.12);border:1px solid rgba(255,128,111,.45);padding:10px 12px;border-radius:10px;font-size:.92rem}
+.help{background:var(--raise);border:1px solid var(--line);border-radius:10px;padding:14px 16px;display:flex;flex-direction:column;gap:10px}
+.help-title{font-weight:500}
+.help-steps{margin:0;padding-inline-start:1.2em;display:flex;flex-direction:column;gap:6px;color:var(--muted);font-size:.95rem}
+.help-steps b{color:var(--text);font-weight:500}
+.actions{display:flex;flex-wrap:wrap;gap:10px}
+button{cursor:pointer;border-radius:10px;border:1px solid var(--line);background:var(--raise);padding:11px 18px;font-weight:500;min-height:46px}
+button:hover{border-color:var(--muted)}
+button:disabled{opacity:.45;cursor:default}
+button.primary{background:var(--glow);color:var(--glow-ink);border-color:var(--glow);font-family:var(--f-display);font-size:1.08rem;font-weight:600;padding-inline:26px}
+button.primary.stop{background:transparent;color:var(--cry);border-color:var(--cry)}
+button.small{min-height:36px;padding:6px 12px;font-size:.88rem}
+button.ghost{background:transparent}
+
+/* phone */
+.steps{margin:0;padding-inline-start:1.2em;display:flex;flex-direction:column;gap:6px;color:var(--muted);font-size:.95rem}
+.steps b{color:var(--text);font-weight:500}
+.topic-row{display:flex;gap:14px;align-items:center;flex-wrap:wrap}
+.qr{width:128px;height:128px;flex:none;border-radius:8px;overflow:hidden;background:#f6efe3;padding:0}
+.qr img,.qr canvas{display:block;width:100%;height:auto}
+.topic-box{display:flex;flex-direction:column;gap:6px;min-width:0;flex:1 1 160px}
+.label{font-size:.75rem;letter-spacing:.06em;color:var(--muted)}
+code{font-family:var(--f-mono);font-size:.95rem;background:var(--well);padding:8px 10px;border-radius:8px;word-break:break-all;text-align:left;user-select:all}
+.row{display:flex;gap:8px;flex-wrap:wrap}
+.note{font-size:.88rem;color:var(--muted);min-height:1.2em}
+.note.ok{color:var(--calm)}.note.bad{color:var(--cry)}
+
+/* settings */
+.field{display:flex;flex-direction:column;gap:6px}
+.field-head{display:flex;justify-content:space-between;gap:10px;align-items:baseline;flex-wrap:wrap}
+.field-head output{font-size:.82rem;color:var(--muted)}
+input[type=range]{width:100%;accent-color:var(--glow);height:28px}
+.switch{display:flex;align-items:flex-start;gap:10px;cursor:pointer}
+.switch input{width:20px;height:20px;accent-color:var(--glow);margin:2px 0 0;flex:none}
+.switch small{display:block;color:var(--muted);font-size:.82rem;line-height:1.45}
+.sel{display:flex;justify-content:space-between;align-items:center;gap:10px}
+select{background:var(--raise);border:1px solid var(--line);border-radius:8px;padding:8px 10px;min-height:40px}
+
+/* log */
+#log{list-style:none;margin:0;padding:0;display:flex;flex-direction:column}
+#log li{display:grid;grid-template-columns:auto minmax(0,1fr) auto;gap:12px;align-items:center;padding:10px 0;border-top:1px solid var(--line)}
+#log li:first-child{border-top:0}
+#log li.empty{display:block;color:var(--muted);font-size:.95rem}
+#log time{font-family:var(--f-mono);font-variant-numeric:tabular-nums;color:var(--muted);font-size:.9rem;direction:ltr}
+.ev-text{display:flex;align-items:center;gap:8px;min-width:0}
+.ev-text::before{content:"";width:9px;height:9px;border-radius:50%;flex:none;background:var(--muted)}
+.ev.cry .ev-text::before{background:var(--cry)}
+.ev.motion .ev-text::before{background:var(--lilac)}
+.ev.info .ev-text::before{background:var(--calm)}
+.ev.warn .ev-text::before{background:var(--glow)}
+.ev-send{font-size:.8rem;color:var(--muted);white-space:nowrap}
+.ev-send.fail{color:var(--cry)}
+
+/* blackout */
+#blackout{position:fixed;inset:0;background:#000;z-index:50;display:flex;flex-direction:column;align-items:center;justify-content:flex-end;gap:10px;padding-bottom:max(28px, env(safe-area-inset-bottom, 0px));cursor:pointer}
+#blackout[hidden]{display:none}
+.bo-dot{width:8px;height:8px;border-radius:50%;background:#3a2a14}
+#blackout[data-state="cry"] .bo-dot{background:#7a2c24}
+.bo-text{color:#2a2a33;font-size:.8rem}
+
+@media (prefers-reduced-motion:reduce){*{animation:none!important;transition:none!important}}
+</style>
+</head>
+<body>
+<div class="wrap">
+  <header class="top">
+    <div class="brand">
+      <span class="moon" aria-hidden="true"></span>
+      <div>
+        <h1>שומר לילה</h1>
+        <p class="sub">הטאבלט מאזין ומסתכל, הטלפון מקבל התראה</p>
+      </div>
+    </div>
+    <div class="status" id="status" data-state="idle" role="status" aria-live="polite">
+      <span class="dot"></span>
+      <span class="status-text" id="statusText">לא פעיל</span>
+      <span class="status-since" id="statusSince"></span>
+    </div>
+  </header>
+
+  <main class="grid">
+    <section class="card watch" aria-label="ניטור">
+      <div class="video-wrap">
+        <video id="video" playsinline muted autoplay></video>
+        <div class="video-empty" id="videoEmpty">המצלמה תופעל כשתלחץ "התחל ניטור"</div>
+      </div>
+
+      <div class="meters">
+        <div class="meter">
+          <div class="meter-head"><span class="k">קול מעל הרקע</span><span class="num" id="soundNum" dir="ltr">— dB</span></div>
+          <div class="bar"><div class="fill" id="soundFill"></div><div class="tick" id="soundTick"></div></div>
+          <div class="meter-foot"><span id="floorNum">רעש רקע —</span><span id="soundState"></span></div>
+        </div>
+        <div class="meter">
+          <div class="meter-head"><span class="k">תנועה בתמונה</span><span class="num" id="motionNum" dir="ltr">— %</span></div>
+          <div class="bar"><div class="fill" id="motionFill"></div><div class="tick" id="motionTick"></div></div>
+          <div class="meter-foot"><span id="lightNum">תאורה —</span><span id="motionState"></span></div>
+        </div>
+      </div>
+
+      <div class="strip">
+        <div class="strip-legend">
+          <span class="keys"><span class="key s">קול</span><span class="key m">תנועה</span></span>
+          <span>הדקה האחרונה · הקו המקווקו הוא סף ההתראה</span>
+        </div>
+        <canvas id="hist" aria-label="גרף קול ותנועה בדקה האחרונה"></canvas>
+      </div>
+
+      <p class="hint" id="lightHint" hidden>חשוך מדי לזיהוי תנועה. מנורת לילה עמומה בחדר תפתור את זה. זיהוי הבכי ממשיך לעבוד.</p>
+      <p class="hint" id="wakeHint" hidden>הדפדפן לא מאפשר להשאיר את המסך דלוק. כבה נעילה אוטומטית בהגדרות הטאבלט, אחרת הניטור ייעצר כשהמסך ייכבה.</p>
+      <p class="err" id="err" hidden></p>
+      <div class="help" id="permHelp" hidden>
+        <p class="help-title" id="permTitle"></p>
+        <ol class="help-steps" id="permSteps"></ol>
+        <code id="permUrl" dir="ltr" hidden></code>
+        <div class="row"><button class="small" id="reloadBtn" type="button">רענן את הדף</button></div>
+      </div>
+
+      <div class="actions">
+        <button class="primary" id="startBtn" type="button">התחל ניטור</button>
+        <button id="dimBtn" type="button" disabled>מסך כהה</button>
+      </div>
+    </section>
+
+    <aside class="side">
+      <section class="card" aria-labelledby="phoneH">
+        <h2 id="phoneH">חיבור הטלפון</h2>
+        <ol class="steps">
+          <li>התקן בטלפון את האפליקציה <b>ntfy</b> (חינמית, באנדרואיד ובאייפון).</li>
+          <li>באפליקציה לחץ <b>+</b> והירשם לערוץ שלמטה, או סרוק את הקוד.</li>
+          <li>לחץ <b>שלח בדיקה</b> וודא שההתראה הגיעה.</li>
+        </ol>
+        <div class="topic-row">
+          <div class="qr" id="qr" aria-label="קוד QR לערוץ"></div>
+          <div class="topic-box">
+            <span class="label">שם הערוץ</span>
+            <code id="topic" dir="ltr"></code>
+            <div class="row">
+              <button class="small" id="copyBtn" type="button">העתק</button>
+              <button class="small ghost" id="newTopicBtn" type="button">ערוץ חדש</button>
+            </div>
+          </div>
+        </div>
+        <button id="testBtn" type="button">שלח בדיקה</button>
+        <p class="note" id="testNote"></p>
+      </section>
+
+      <section class="card" aria-labelledby="setH">
+        <h2 id="setH">הגדרות</h2>
+        <div class="field">
+          <div class="field-head"><label for="crySens">רגישות לבכי</label><output id="cryOut"></output></div>
+          <input type="range" id="crySens" min="1" max="10" step="1">
+        </div>
+        <div class="field">
+          <div class="field-head"><label for="motionSens">רגישות לתנועה</label><output id="motionOut"></output></div>
+          <input type="range" id="motionSens" min="1" max="10" step="1">
+        </div>
+        <label class="switch"><input type="checkbox" id="motionOn"><span>התראה גם על תנועה<small>בלי זה תגיע התראה רק על בכי</small></span></label>
+        <label class="switch"><input type="checkbox" id="snapOn"><span>לצרף תמונה להתראה<small>התמונה עוברת דרך השרת הציבורי של ntfy ונמחקת אחרי כמה שעות. שם הערוץ האקראי הוא מה שמגן עליה.</small></span></label>
+        <label class="sel" for="cooldown">זמן בין התראות מאותו סוג
+          <select id="cooldown">
+            <option value="1">דקה</option>
+            <option value="3">3 דקות</option>
+            <option value="5">5 דקות</option>
+            <option value="10">10 דקות</option>
+          </select>
+        </label>
+        <label class="sel" for="facing">מצלמה
+          <select id="facing">
+            <option value="user">קדמית</option>
+            <option value="environment">אחורית</option>
+          </select>
+        </label>
+        <p class="note" id="facingNote"></p>
+      </section>
+    </aside>
+
+    <section class="card log" aria-labelledby="logH">
+      <h2 id="logH">יומן הלילה</h2>
+      <ul id="log"><li class="empty">כאן יופיעו בכי, תנועה וכל התראה שנשלחה</li></ul>
+    </section>
+  </main>
+</div>
+
+<div id="blackout" hidden data-state="idle"><span class="bo-dot"></span><span class="bo-text">נגיעה מחזירה את המסך</span></div>
+
+<script src="https://cdnjs.cloudflare.com/ajax/libs/qrcodejs/1.0.0/qrcode.min.js"></script>
+<script>
+(() => {
+'use strict';
+const $ = id => document.getElementById(id);
+const NTFY = 'https://ntfy.sh';
+
+/* ---------- settings ---------- */
+const store = {
+  get(k, d) { try { const v = localStorage.getItem('nightwatch.' + k); return v === null ? d : JSON.parse(v); } catch (e) { return d; } },
+  set(k, v) { try { localStorage.setItem('nightwatch.' + k, JSON.stringify(v)); } catch (e) {} }
+};
+function genTopic() {
+  const a = 'abcdefghijkmnpqrstuvwxyz23456789';
+  const r = crypto.getRandomValues(new Uint8Array(16));
+  let s = 'nightwatch-';
+  for (const b of r) s += a[b % a.length];
+  return s;
+}
+const S = {
+  topic: store.get('topic', null) || genTopic(),
+  crySens: store.get('crySens', 6),
+  motionSens: store.get('motionSens', 5),
+  motionOn: store.get('motionOn', true),
+  snapOn: store.get('snapOn', false),
+  cooldown: store.get('cooldown', 3),
+  facing: store.get('facing', 'user')
+};
+store.set('topic', S.topic);
+
+const cryMargin = () => 26 - 2 * S.crySens;                 // dB above room noise
+const motionThr = () => 0.5 + (10 - S.motionSens) * 0.85;   // % of pixels changed
+
+const pad = n => String(n).padStart(2, '0');
+const hhmm = d => pad(d.getHours()) + ':' + pad(d.getMinutes());
+const hhmmss = d => hhmm(d) + ':' + pad(d.getSeconds());
+const sum = a => a.reduce((x, y) => x + y, 0);
+
+/* ---------- topic + QR ---------- */
+function renderTopic() {
+  $('topic').textContent = S.topic;
+  const qr = $('qr');
+  qr.innerHTML = '';
+  if (window.QRCode) {
+    try {
+      new QRCode(qr, { text: NTFY + '/' + S.topic, width: 128, height: 128, colorDark: '#141a33', colorLight: '#f6efe3', correctLevel: QRCode.CorrectLevel.M });
+      qr.hidden = false;
+    } catch (e) { qr.hidden = true; }
+  } else { qr.hidden = true; }
+}
+renderTopic();
+
+$('copyBtn').addEventListener('click', () => {
+  const btn = $('copyBtn');
+  const done = () => { btn.textContent = 'הועתק'; setTimeout(() => { btn.textContent = 'העתק'; }, 1600); };
+  const fallback = () => {
+    const r = document.createRange(); r.selectNodeContents($('topic'));
+    const sel = getSelection(); sel.removeAllRanges(); sel.addRange(r);
+  };
+  try {
+    navigator.clipboard.writeText(S.topic).then(done, fallback);
+  } catch (e) { fallback(); }
+});
+
+let newTopicArmed = null;
+$('newTopicBtn').addEventListener('click', () => {
+  const btn = $('newTopicBtn');
+  if (!newTopicArmed) {
+    btn.textContent = 'הטלפון יצטרך להירשם מחדש. ללחוץ שוב?';
+    newTopicArmed = setTimeout(() => { btn.textContent = 'ערוץ חדש'; newTopicArmed = null; }, 4000);
+    return;
+  }
+  clearTimeout(newTopicArmed); newTopicArmed = null;
+  btn.textContent = 'ערוץ חדש';
+  S.topic = genTopic(); store.set('topic', S.topic); renderTopic();
+  setNote('נוצר ערוץ חדש. הירשם אליו בטלפון ושלח בדיקה.', '');
+});
+
+/* ---------- settings controls ---------- */
+function bindRange(id, key, outId, fmt) {
+  const el = $(id); el.value = S[key];
+  const upd = () => { $(outId).textContent = fmt(+el.value); };
+  upd();
+  el.addEventListener('input', () => { S[key] = +el.value; store.set(key, S[key]); upd(); });
+}
+bindRange('crySens', 'crySens', 'cryOut', v => v + '/10 · התראה מ־' + (26 - 2 * v) + ' dB מעל הרקע');
+bindRange('motionSens', 'motionSens', 'motionOut', v => v + '/10 · התראה מ־' + (0.5 + (10 - v) * 0.85).toFixed(1) + '% מהתמונה');
+function bindCheck(id, key) {
+  const el = $(id); el.checked = !!S[key];
+  el.addEventListener('change', () => { S[key] = el.checked; store.set(key, S[key]); });
+}
+bindCheck('motionOn', 'motionOn');
+bindCheck('snapOn', 'snapOn');
+$('cooldown').value = String(S.cooldown);
+$('cooldown').addEventListener('change', e => { S.cooldown = +e.target.value; store.set('cooldown', S.cooldown); });
+$('facing').value = S.facing;
+$('facing').addEventListener('change', e => {
+  S.facing = e.target.value; store.set('facing', S.facing);
+  $('facingNote').textContent = running ? 'המצלמה תתחלף בהפעלה הבאה של הניטור.' : '';
+});
+
+/* ---------- notifications (ntfy) ---------- */
+const video = $('video');
+function snapshot() {
+  return new Promise(resolve => {
+    if (!video.videoWidth) return resolve(null);
+    const w = 640, h = Math.round(w * video.videoHeight / video.videoWidth);
+    const c = document.createElement('canvas'); c.width = w; c.height = h;
+    c.getContext('2d').drawImage(video, 0, 0, w, h);
+    c.toBlob(b => resolve(b), 'image/jpeg', 0.72);
+  });
+}
+async function postOnce(n) {
+  if (n.snap) {
+    const blob = await snapshot();
+    if (blob) {
+      const qs = new URLSearchParams({ title: n.title, message: n.message, priority: String(n.priority), tags: n.tags.join(','), filename: 'nursery.jpg' });
+      try {
+        const r = await fetch(NTFY + '/' + encodeURIComponent(S.topic) + '?' + qs.toString(), { method: 'PUT', body: blob });
+        if (r.ok) return true;
+      } catch (e) { /* fall back to text */ }
+    }
+  }
+  const r = await fetch(NTFY + '/', { method: 'POST', body: JSON.stringify({ topic: S.topic, title: n.title, message: n.message, priority: n.priority, tags: n.tags }) });
+  if (!r.ok) throw new Error('HTTP ' + r.status);
+  return true;
+}
+async function send(n) {
+  try { return await postOnce(n); }
+  catch (e) {
+    await new Promise(r => setTimeout(r, 15000));
+    try { return await postOnce({ ...n, snap: false }); } catch (e2) { return false; }
+  }
+}
+function setNote(text, cls) { const el = $('testNote'); el.textContent = text; el.className = 'note' + (cls ? ' ' + cls : ''); }
+$('testBtn').addEventListener('click', async () => {
+  const btn = $('testBtn'); btn.disabled = true; setNote('שולח…', '');
+  const ok = await send({ title: 'בדיקה משומר לילה', message: 'אם ההודעה הזאת הגיעה, ההתראות עובדות', priority: 4, tags: ['bell'], snap: false });
+  btn.disabled = false;
+  setNote(ok ? 'נשלח. אם לא הגיע תוך כמה שניות, בדוק שנרשמת בדיוק לשם הערוץ הזה.' : 'השליחה נכשלה. בדוק שהטאבלט מחובר לאינטרנט.', ok ? 'ok' : 'bad');
+});
+
+/* ---------- log ---------- */
+function addEvent(kind, text) {
+  const log = $('log');
+  const empty = log.querySelector('.empty'); if (empty) empty.remove();
+  const li = document.createElement('li'); li.className = 'ev ' + kind;
+  const t = document.createElement('time'); t.textContent = hhmmss(new Date());
+  const p = document.createElement('span'); p.className = 'ev-text'; p.textContent = text;
+  const s = document.createElement('span'); s.className = 'ev-send';
+  li.append(t, p, s); log.prepend(li);
+  while (log.children.length > 80) log.lastChild.remove();
+  return s;
+}
+function sendLogged(kind, logText, n) {
+  const s = addEvent(kind, logText);
+  s.textContent = 'שולח…';
+  send(n).then(ok => { s.textContent = ok ? 'נשלח לטלפון' : 'לא נשלח'; s.classList.toggle('fail', !ok); });
+}
+
+/* ---------- alerts ---------- */
+const ALERTS = {
+  cry: { title: 'התינוקת בוכה', msg: 'בכי מתמשך בחדר', priority: 5, tags: ['baby', 'loud_sound'], log: 'בכי מתמשך' },
+  motion: { title: 'תנועה במיטה', msg: 'זוהתה תנועה בחדר', priority: 4, tags: ['baby'], log: 'תנועה' }
+};
+const lastAlert = { cry: 0, motion: 0 };
+let lastCryAt = 0;
+function trigger(type) {
+  const now = Date.now();
+  if (type === 'cry') lastCryAt = now;
+  if (now - lastAlert[type] < S.cooldown * 60000) return;
+  lastAlert[type] = now;
+  const a = ALERTS[type];
+  sendLogged(type, a.log, { title: a.title, message: a.msg + ' · ' + hhmm(new Date()), priority: a.priority, tags: a.tags, snap: S.snapOn });
+}
+
+/* ---------- monitoring ---------- */
+let stream = null, ac = null, analyser = null, tbuf = null, timers = [], running = false, startedAt = 0, wakeLock = null, stoppedNotice = false;
+const warmed = () => Date.now() - startedAt > 6000;
+
+// sound
+let levelDb = -100, floorDb = -100, aboveDb = 0, soundState = 'quiet', floorTick = 0;
+const floorHist = [], loudWin = [];
+function percentile(arr, p) { const a = arr.slice().sort((x, y) => x - y); return a[Math.min(a.length - 1, Math.floor(p * a.length))]; }
+function audioTick() {
+  if (!analyser) return;
+  if (ac.state === 'suspended') ac.resume().catch(() => {});
+  analyser.getFloatTimeDomainData(tbuf);
+  let acc = 0; for (let i = 0; i < tbuf.length; i++) { const v = tbuf[i]; acc += v * v; }
+  levelDb = Math.max(-100, 20 * Math.log10(Math.sqrt(acc / tbuf.length) + 1e-10));
+  // room noise = 10th percentile of the last 3 minutes, sampled twice a second
+  if (++floorTick % 5 === 0) { floorHist.push(levelDb); if (floorHist.length > 360) floorHist.shift(); }
+  floorDb = floorHist.length >= 4 ? percentile(floorHist, 0.1) : levelDb;
+  aboveDb = Math.max(0, levelDb - floorDb);
+  const loud = levelDb > -72 && aboveDb >= cryMargin();
+  loudWin.push(loud ? 1 : 0); if (loudWin.length > 40) loudWin.shift();   // last 4 s
+  const frac = sum(loudWin) / loudWin.length;
+  soundState = (loudWin.length >= 30 && frac >= 0.4) ? 'cry' : (loud ? 'noise' : 'quiet');
+  if (soundState === 'cry' && warmed()) trigger('cry');
+}
+
+// motion
+const MW = 80, MH = 60;
+const mc = document.createElement('canvas'); mc.width = MW; mc.height = MH;
+const mctx = mc.getContext('2d', { willReadFrequently: true });
+let prevFrame = null, prevMean = 0, motionPct = 0, brightness = -1;
+const motionWin = [];
+function motionTick() {
+  if (video.readyState < 2) return;
+  mctx.drawImage(video, 0, 0, MW, MH);
+  const d = mctx.getImageData(0, 0, MW, MH).data;
+  const N = MW * MH, cur = new Float32Array(N);
+  let mean = 0;
+  for (let i = 0, j = 0; i < N; i++, j += 4) { const g = 0.299 * d[j] + 0.587 * d[j + 1] + 0.114 * d[j + 2]; cur[i] = g; mean += g; }
+  mean /= N; brightness = mean;
+  if (prevFrame) {
+    const shift = mean - prevMean;              // ignore whole-frame exposure changes
+    const pth = mean < 45 ? 26 : 18;            // dark frames are noisier
+    let changed = 0;
+    for (let i = 0; i < N; i++) if (Math.abs(cur[i] - prevFrame[i] - shift) > pth) changed++;
+    motionPct = changed / N * 100;
+    motionWin.push(motionPct >= motionThr() ? 1 : 0); if (motionWin.length > 8) motionWin.shift();  // last 2 s
+    if (S.motionOn && warmed() && brightness >= 12 && sum(motionWin) >= 3) trigger('motion');
+  }
+  prevFrame = cur; prevMean = mean;
+}
+
+// history strip (60 s)
+const histS = [], histM = [];
+function histTick() {
+  histS.push(aboveDb); histM.push(motionPct);
+  if (histS.length > 120) { histS.shift(); histM.shift(); }
+}
+const tok = (() => { const cs = getComputedStyle(document.documentElement); const g = n => cs.getPropertyValue(n).trim(); return { line: g('--line'), glow: g('--glow'), lilac: g('--lilac'), muted: g('--muted') }; })();
+function drawHist() {
+  const c = $('hist'); const dpr = window.devicePixelRatio || 1;
+  const w = c.clientWidth, h = c.clientHeight; if (!w || !h) return;
+  if (c.width !== Math.round(w * dpr)) { c.width = Math.round(w * dpr); c.height = Math.round(h * dpr); }
+  const g = c.getContext('2d'); g.setTransform(dpr, 0, 0, dpr, 0, 0); g.clearRect(0, 0, w, h);
+  const pad = 6, gap = 8, bandH = (h - pad * 2 - gap) / 2;
+  const bands = [
+    { data: histS, max: 30, thr: cryMargin(), color: tok.glow, y0: pad },
+    { data: histM, max: 12, thr: motionThr(), color: tok.lilac, y0: pad + bandH + gap }
+  ];
+  const x = i => pad + (w - pad * 2) * (i / 119);   // newest on the right
+  for (const b of bands) {
+    const yOf = v => b.y0 + bandH - Math.min(1, v / b.max) * bandH;
+    g.strokeStyle = tok.line; g.lineWidth = 1; g.setLineDash([]);
+    g.beginPath(); g.moveTo(pad, b.y0 + bandH + .5); g.lineTo(w - pad, b.y0 + bandH + .5); g.stroke();
+    g.strokeStyle = tok.muted; g.setLineDash([4, 4]);
+    const ty = Math.round(yOf(b.thr)) + .5;
+    g.beginPath(); g.moveTo(pad, ty); g.lineTo(w - pad, ty); g.stroke();
+    g.setLineDash([]);
+    if (b.data.length < 2) continue;
+    const off = 120 - b.data.length;
+    g.beginPath();
+    b.data.forEach((v, i) => { const px = x(i + off), py = yOf(v); i ? g.lineTo(px, py) : g.moveTo(px, py); });
+    g.strokeStyle = b.color; g.lineWidth = 1.75; g.lineJoin = 'round'; g.stroke();
+    g.lineTo(x(119), b.y0 + bandH); g.lineTo(x(off), b.y0 + bandH); g.closePath();
+    g.globalAlpha = .14; g.fillStyle = b.color; g.fill(); g.globalAlpha = 1;
+    const lv = b.data[b.data.length - 1];
+    g.beginPath(); g.arc(x(119), yOf(lv), 3, 0, Math.PI * 2); g.fillStyle = b.color; g.fill();
+  }
+}
+
+// UI
+function overall() {
+  if (!running) return ['idle', 'לא פעיל'];
+  if (!warmed()) return ['warm', 'מכייל את רעש הרקע…'];
+  if (soundState === 'cry' || Date.now() - lastCryAt < 8000) return ['cry', 'בכי'];
+  if (soundState === 'noise') return ['noise', 'רעש'];
+  if (sum(motionWin) >= 3) return ['motion', 'תנועה'];
+  return ['calm', 'שקט'];
+}
+function ui() {
+  const m = cryMargin(), mt = motionThr();
+  $('soundFill').style.width = Math.min(100, aboveDb / 30 * 100) + '%';
+  $('soundTick').style.insetInlineStart = (m / 30 * 100) + '%';
+  $('motionFill').style.width = Math.min(100, motionPct / 12 * 100) + '%';
+  $('motionTick').style.insetInlineStart = Math.min(100, mt / 12 * 100) + '%';
+  if (running) {
+    $('soundNum').textContent = '+' + aboveDb.toFixed(0) + ' dB';
+    $('floorNum').textContent = 'רעש רקע ' + floorDb.toFixed(0) + ' dBFS';
+    $('soundState').textContent = soundState === 'cry' ? 'בכי מתמשך' : soundState === 'noise' ? 'רעש' : 'שקט';
+    $('motionNum').textContent = hasVideo ? motionPct.toFixed(1) + ' %' : '— %';
+    $('lightNum').textContent = brightness < 0 ? 'תאורה —' : 'תאורה ' + Math.round(brightness / 255 * 100) + '%';
+    $('motionState').textContent = !hasVideo ? 'אין מצלמה' : !S.motionOn ? 'התראות כבויות' : sum(motionWin) >= 3 ? 'תנועה' : 'רגוע';
+    $('lightHint').hidden = !(brightness >= 0 && brightness < 12 && warmed());
+  }
+  const [state, text] = overall();
+  $('status').dataset.state = state;
+  $('statusText').textContent = text;
+  $('statusSince').textContent = running ? 'מאז ' + hhmm(new Date(startedAt)) : '';
+  $('blackout').dataset.state = state;
+  drawHist();
+}
+
+async function requestWake() {
+  if (!('wakeLock' in navigator)) { $('wakeHint').hidden = false; return; }
+  try {
+    wakeLock = await navigator.wakeLock.request('screen');
+    $('wakeHint').hidden = true;
+  } catch (e) { $('wakeHint').hidden = false; }
+}
+
+function showErr(msg) { const e = $('err'); e.textContent = msg; e.hidden = !msg; }
+
+/* ---------- permissions ---------- */
+const UA = navigator.userAgent;
+const ENV = {
+  iOS: /iPad|iPhone|iPod/.test(UA) || (navigator.platform === 'MacIntel' && navigator.maxTouchPoints > 1),
+  iosBrowser: (UA.match(/CriOS|FxiOS|EdgiOS|OPiOS/) || [''])[0],
+  samsung: /SamsungBrowser/.test(UA),
+  firefox: /Firefox|FxiOS/.test(UA),
+  webview: (/Android/.test(UA) && /; wv\)/.test(UA)) || /FBAN|FBAV|Instagram|Line\/|GSA\//.test(UA),
+  inFrame: (() => { try { return window.self !== window.top; } catch (e) { return true; } })()
+};
+async function permState(name) {
+  try { return (await navigator.permissions.query({ name })).state; } catch (e) { return 'unknown'; }
+}
+function stepsFor() {
+  if (ENV.iOS && ENV.iosBrowser) {
+    const name = { CriOS: 'Chrome', FxiOS: 'Firefox', EdgiOS: 'Edge', OPiOS: 'Opera' }[ENV.iosBrowser];
+    return [
+      'פתח את <b>הגדרות</b> האייפד ← <b>אפליקציות</b> ← <b>' + name + '</b>.',
+      'הפעל את <b>מצלמה</b> ואת <b>מיקרופון</b>.',
+      'חזור לכאן, רענן את הדף ולחץ שוב <b>התחל ניטור</b>.'
+    ];
+  }
+  if (ENV.iOS) return [
+    'בשורת הכתובת הקש על הסמל <b>אA</b> (או סמל התפריט שליד הכתובת).',
+    'בחר <b>הגדרות אתר</b> (Website Settings).',
+    'שנה את <b>מצלמה</b> ואת <b>מיקרופון</b> ל<b>אפשר</b> (Allow).',
+    'אם זה לא עוזר: <b>הגדרות</b> האייפד ← <b>אפליקציות</b> ← <b>Safari</b> ← מצלמה ומיקרופון ← <b>שאל</b> או <b>אפשר</b>.',
+    'רענן את הדף ולחץ שוב <b>התחל ניטור</b>.'
+  ];
+  if (ENV.samsung) return [
+    'הקש על סמל המנעול שליד כתובת האתר.',
+    'בחר <b>הרשאות</b> ואפשר <b>מצלמה</b> ו<b>מיקרופון</b>.',
+    'אם עדיין חסום: <b>הגדרות</b> הטאבלט ← <b>אפליקציות</b> ← <b>Samsung Internet</b> ← <b>הרשאות</b> ← מצלמה ומיקרופון ← <b>אפשר</b>.',
+    'רענן את הדף ולחץ שוב <b>התחל ניטור</b>.'
+  ];
+  if (ENV.firefox) return [
+    'הקש על סמל המנעול שליד כתובת האתר.',
+    'נקה את החסימה של <b>מצלמה</b> ו<b>מיקרופון</b>.',
+    'רענן את הדף ולחץ שוב <b>התחל ניטור</b>, ואז בחר <b>אפשר</b>.'
+  ];
+  return [
+    'הקש על הסמל שליד כתובת האתר בשורת הכתובת.',
+    'בחר <b>הרשאות</b> (Permissions) ואפשר <b>מצלמה</b> ו<b>מיקרופון</b>. אם אין אפשרות כזו, בחר <b>איפוס הרשאות</b>.',
+    'אם עדיין חסום: <b>הגדרות</b> הטאבלט ← <b>אפליקציות</b> ← <b>Chrome</b> ← <b>הרשאות</b> ← מצלמה ומיקרופון ← <b>אפשר בזמן השימוש באפליקציה</b>.',
+    'רענן את הדף ולחץ שוב <b>התחל ניטור</b>.'
+  ];
+}
+function showPermHelp(title, steps, url) {
+  $('permTitle').textContent = title;
+  $('permSteps').innerHTML = steps.map(s => '<li>' + s + '</li>').join('');
+  $('permUrl').hidden = !url; $('permUrl').textContent = url || '';
+  $('permHelp').hidden = false;
+}
+function hidePermHelp() { $('permHelp').hidden = true; }
+$('reloadBtn').addEventListener('click', () => location.reload());
+
+async function explainBlocked(which, partial) {
+  if (ENV.inFrame) {
+    showPermHelp('הדף פתוח בתוך תצוגה מקדימה, ושם המצלמה והמיקרופון חסומים בלי שאלה.', [
+      'פתח את הכתובת של הדף (למשל ב־GitHub Pages) ישירות ב־Chrome או ב־Safari, לא מתוך הצ׳אט.',
+      'לחץ שם על <b>התחל ניטור</b> ובחר <b>אפשר</b> בחלון שיקפוץ.'
+    ]);
+    return;
+  }
+  if (ENV.webview) {
+    showPermHelp('הדף נפתח בדפדפן הפנימי של אפליקציה אחרת, והוא לא מאפשר גישה למצלמה ולמיקרופון.', [
+      'העתק את הכתובת שלמטה ופתח אותה ב־Chrome או ב־Safari.',
+      'לחץ שם על <b>התחל ניטור</b> ובחר <b>אפשר</b> בחלון שיקפוץ.'
+    ], location.href);
+    return;
+  }
+  const what = which === 'camera' ? 'למצלמה' : which === 'mic' ? 'למיקרופון' : 'למצלמה ולמיקרופון';
+  if (partial) { showPermHelp('המצלמה חסומה, אז הניטור פועל על זיהוי בכי בלבד. כדי להוסיף זיהוי תנועה:', stepsFor()); return; }
+  const [cam, mic] = await Promise.all([permState('camera'), permState('microphone')]);
+  const remembered = cam === 'denied' || mic === 'denied';
+  showPermHelp(remembered
+    ? 'הדפדפן זוכר שהגישה ' + what + ' נחסמה, ולכן הוא לא מקפיץ חלון אישור. כך פותחים את החסימה:'
+    : 'לא התקבל אישור ' + what + '. לחץ שוב על "התחל ניטור" ובחר "אפשר" בחלון שיקפוץ. אם החלון לא מופיע:', stepsFor());
+}
+
+const AUDIO_C = { echoCancellation: false, noiseSuppression: false, autoGainControl: false };
+const gum = withVideo => navigator.mediaDevices.getUserMedia({
+  audio: AUDIO_C,
+  video: withVideo ? { facingMode: S.facing, width: { ideal: 640 }, height: { ideal: 480 }, frameRate: { ideal: 12, max: 15 } } : false
+});
+const VIDEO_EMPTY_TEXT = $('videoEmpty').textContent;
+let hasVideo = false;
+
+async function start() {
+  showErr(''); hidePermHelp();
+  if (!window.isSecureContext || !navigator.mediaDevices || !navigator.mediaDevices.getUserMedia) {
+    showErr('הדפדפן חוסם מצלמה ומיקרופון בדף הזה. פתח אותו מכתובת https (למשל GitHub Pages) ולא כקובץ מקומי.');
+    return;
+  }
+  const btn = $('startBtn'); btn.disabled = true;
+  const [cam, mic] = await Promise.all([permState('camera'), permState('microphone')]);
+  if (mic === 'denied') { btn.disabled = false; await explainBlocked('mic'); return; }
+
+  // This call is what makes the browser show its permission prompt.
+  let err = null, cameraBlocked = cam === 'denied';
+  try { stream = await gum(!cameraBlocked); } catch (e) { err = e; }
+
+  if (err && !cameraBlocked) {
+    const n = err.name;
+    if (n === 'NotAllowedError' || n === 'SecurityError') {
+      const [cam2, mic2] = await Promise.all([permState('camera'), permState('microphone')]);
+      if (cam2 === 'denied' && mic2 !== 'denied') {
+        cameraBlocked = true;
+        try { stream = await gum(false); err = null; } catch (e2) { err = e2; }
+      }
+    } else {
+      // no camera, or the camera is busy: keep going with sound only
+      try { stream = await gum(false); err = null; } catch (e2) { err = e2; }
+    }
+  }
+
+  if (err) {
+    btn.disabled = false;
+    const n = err.name;
+    if (n === 'NotAllowedError' || n === 'SecurityError') await explainBlocked('both');
+    else showErr(n === 'NotFoundError' ? 'לא נמצא מיקרופון במכשיר.'
+      : n === 'NotReadableError' ? 'המיקרופון תפוס באפליקציה אחרת. סגור אותה ונסה שוב.'
+      : 'לא הצלחתי להפעיל את המיקרופון (' + (n || 'שגיאה') + ').');
+    return;
+  }
+
+  hasVideo = stream.getVideoTracks().length > 0;
+  if (hasVideo) {
+    video.srcObject = stream;
+    video.classList.toggle('mirror', S.facing === 'user');
+    $('videoEmpty').hidden = true;
+    try { await video.play(); } catch (e) {}
+  } else {
+    $('videoEmpty').textContent = 'אין גישה למצלמה. הניטור מאזין לבכי בלבד.';
+    $('videoEmpty').hidden = false;
+    if (cameraBlocked) await explainBlocked('camera', true);
+  }
+
+  const AC = window.AudioContext || window.webkitAudioContext;
+  ac = new AC();
+  try { await ac.resume(); } catch (e) {}
+  const src = ac.createMediaStreamSource(stream);
+  const hp = ac.createBiquadFilter(); hp.type = 'highpass'; hp.frequency.value = 300;   // cry energy sits roughly 300–3500 Hz
+  const lp = ac.createBiquadFilter(); lp.type = 'lowpass'; lp.frequency.value = 3500;
+  analyser = ac.createAnalyser(); analyser.fftSize = 2048;
+  src.connect(hp); hp.connect(lp); lp.connect(analyser);
+  tbuf = new Float32Array(analyser.fftSize);
+
+  floorHist.length = 0; loudWin.length = 0; motionWin.length = 0; histS.length = 0; histM.length = 0;
+  prevFrame = null; brightness = -1; floorTick = 0; stoppedNotice = false;
+  running = true; startedAt = Date.now();
+  timers = [setInterval(audioTick, 100), setInterval(motionTick, 250), setInterval(histTick, 500), setInterval(ui, 250)];
+
+  stream.getTracks().forEach(t => t.addEventListener('ended', () => {
+    if (!running || stoppedNotice) return;
+    stoppedNotice = true;
+    sendLogged('warn', 'המצלמה או המיקרופון נותקו', { title: 'הניטור נעצר', message: 'המצלמה או המיקרופון בטאבלט נותקו', priority: 4, tags: ['warning'], snap: false });
+  }));
+
+  await requestWake();
+  btn.disabled = false; btn.textContent = 'עצור ניטור'; btn.classList.add('stop');
+  $('dimBtn').disabled = false; $('facingNote').textContent = '';
+  sendLogged('info', hasVideo ? 'הניטור התחיל' : 'הניטור התחיל, בכי בלבד', { title: 'הניטור פועל', message: 'שומר לילה מאזין בחדר מ־' + hhmm(new Date()) + (hasVideo ? '' : ' (בלי מצלמה, בכי בלבד)'), priority: 2, tags: ['white_check_mark'], snap: false });
+}
+
+function stop() {
+  running = false;
+  timers.forEach(clearInterval); timers = [];
+  if (stream) stream.getTracks().forEach(t => t.stop());
+  stream = null;
+  if (ac) ac.close().catch(() => {});
+  ac = null; analyser = null;
+  if (wakeLock) { wakeLock.release().catch(() => {}); wakeLock = null; }
+  video.srcObject = null; hasVideo = false;
+  $('videoEmpty').textContent = VIDEO_EMPTY_TEXT; $('videoEmpty').hidden = false;
+  const btn = $('startBtn'); btn.textContent = 'התחל ניטור'; btn.classList.remove('stop');
+  $('dimBtn').disabled = true; $('lightHint').hidden = true;
+  addEvent('info', 'הניטור הופסק');
+  ui();
+}
+
+$('startBtn').addEventListener('click', () => { running ? stop() : start(); });
+$('dimBtn').addEventListener('click', () => { $('blackout').hidden = false; });
+$('blackout').addEventListener('click', () => { $('blackout').hidden = true; });
+
+document.addEventListener('visibilitychange', () => {
+  if (!running) return;
+  if (document.visibilityState === 'visible') {
+    requestWake();
+    if (ac) ac.resume().catch(() => {});
+  } else {
+    addEvent('warn', 'הדף עבר לרקע. ייתכן שהניטור נעצר עד שתחזור אליו');
+  }
+});
+window.addEventListener('pagehide', () => {
+  if (running && navigator.sendBeacon) {
+    navigator.sendBeacon(NTFY + '/', JSON.stringify({ topic: S.topic, title: 'הניטור נעצר', message: 'דף הניטור בטאבלט נסגר', priority: 4, tags: ['warning'] }));
+  }
+});
+window.addEventListener('resize', drawHist);
+
+ui();
+})();
+</script>
+</body>
+</html>
